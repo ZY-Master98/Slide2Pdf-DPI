@@ -38,8 +38,23 @@
             this.group1 = this.Factory.CreateRibbonGroup();
             this.btnExportFullSlide = this.Factory.CreateRibbonButton();
             this.btnExportContent = this.Factory.CreateRibbonButton();
+            this.imageExportGroup = this.Factory.CreateRibbonGroup();
+            this.imageDpiComboBox = this.Factory.CreateRibbonComboBox();
+            this.imageFormatDropDown = this.Factory.CreateRibbonDropDown();
+            this.btnExportSlideImage = this.Factory.CreateRibbonButton();
+            this.btnExportContentImage = this.Factory.CreateRibbonButton();
+            Microsoft.Office.Tools.Ribbon.RibbonDropDownItem dpi96 = this.Factory.CreateRibbonDropDownItem();
+            Microsoft.Office.Tools.Ribbon.RibbonDropDownItem dpi150 = this.Factory.CreateRibbonDropDownItem();
+            Microsoft.Office.Tools.Ribbon.RibbonDropDownItem dpi300 = this.Factory.CreateRibbonDropDownItem();
+            Microsoft.Office.Tools.Ribbon.RibbonDropDownItem dpi600 = this.Factory.CreateRibbonDropDownItem();
+            Microsoft.Office.Tools.Ribbon.RibbonDropDownItem formatPng = this.Factory.CreateRibbonDropDownItem();
+            Microsoft.Office.Tools.Ribbon.RibbonDropDownItem formatJpeg = this.Factory.CreateRibbonDropDownItem();
+            Microsoft.Office.Tools.Ribbon.RibbonDropDownItem formatTiff = this.Factory.CreateRibbonDropDownItem();
+            Microsoft.Office.Tools.Ribbon.RibbonDropDownItem formatBmp = this.Factory.CreateRibbonDropDownItem();
+            Microsoft.Office.Tools.Ribbon.RibbonDropDownItem formatGif = this.Factory.CreateRibbonDropDownItem();
             this.tab1.SuspendLayout();
             this.group1.SuspendLayout();
+            this.imageExportGroup.SuspendLayout();
             this.SuspendLayout();
             // 
             // tab1
@@ -47,6 +62,7 @@
             this.tab1.ControlId.ControlIdType = Microsoft.Office.Tools.Ribbon.RibbonControlIdType.Office;
             this.tab1.ControlId.OfficeId = "TabHome";
             this.tab1.Groups.Add(this.group1);
+            this.tab1.Groups.Add(this.imageExportGroup);
             this.tab1.Label = "TabHome";
             this.tab1.Name = "tab1";
             // 
@@ -80,6 +96,68 @@
             this.btnExportContent.SuperTip = "Slide2Pdf remembers this slide's export location. Hold Shift while clicking " +
     "to choose a different location.";
             this.btnExportContent.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnExportContent_Click);
+            //
+            // imageExportGroup
+            //
+            this.imageExportGroup.Items.Add(this.imageDpiComboBox);
+            this.imageExportGroup.Items.Add(this.imageFormatDropDown);
+            this.imageExportGroup.Items.Add(this.btnExportSlideImage);
+            this.imageExportGroup.Items.Add(this.btnExportContentImage);
+            this.imageExportGroup.Label = "Export Image";
+            this.imageExportGroup.Name = "imageExportGroup";
+            //
+            // imageDpiComboBox
+            //
+            dpi96.Label = "96 DPI";
+            dpi150.Label = "150 DPI";
+            dpi300.Label = "300 DPI";
+            dpi600.Label = "600 DPI";
+            this.imageDpiComboBox.Items.Add(dpi96);
+            this.imageDpiComboBox.Items.Add(dpi150);
+            this.imageDpiComboBox.Items.Add(dpi300);
+            this.imageDpiComboBox.Items.Add(dpi600);
+            this.imageDpiComboBox.Label = "DPI";
+            this.imageDpiComboBox.Name = "imageDpiComboBox";
+            this.imageDpiComboBox.ScreenTip = "Image resolution in dots per inch";
+            this.imageDpiComboBox.SizeString = "0000 DPI";
+            this.imageDpiComboBox.Text = "300 DPI";
+            this.imageDpiComboBox.SuperTip = "Choose a preset or enter a custom value from 36 to 1200 DPI. Pixel dimensions are calculated from the slide size.";
+            //
+            // imageFormatDropDown
+            //
+            formatPng.Label = "PNG";
+            formatJpeg.Label = "JPEG";
+            formatTiff.Label = "TIFF";
+            formatBmp.Label = "BMP";
+            formatGif.Label = "GIF";
+            this.imageFormatDropDown.Items.Add(formatPng);
+            this.imageFormatDropDown.Items.Add(formatJpeg);
+            this.imageFormatDropDown.Items.Add(formatTiff);
+            this.imageFormatDropDown.Items.Add(formatBmp);
+            this.imageFormatDropDown.Items.Add(formatGif);
+            this.imageFormatDropDown.Label = "Format";
+            this.imageFormatDropDown.Name = "imageFormatDropDown";
+            this.imageFormatDropDown.ScreenTip = "Output image format";
+            //
+            // btnExportSlideImage
+            //
+            this.btnExportSlideImage.Image = global::Slide2Pdf.Properties.Resources.document_pdf_512x512;
+            this.btnExportSlideImage.Label = "Full Slide Image";
+            this.btnExportSlideImage.Name = "btnExportSlideImage";
+            this.btnExportSlideImage.ScreenTip = "Export the current slide as an image";
+            this.btnExportSlideImage.ShowImage = true;
+            this.btnExportSlideImage.SuperTip = "Uses the selected DPI and image format. Hold Shift while clicking to choose a different location.";
+            this.btnExportSlideImage.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnExportSlideImage_Click);
+            //
+            // btnExportContentImage
+            //
+            this.btnExportContentImage.Image = global::Slide2Pdf.Properties.Resources.crop_512x512;
+            this.btnExportContentImage.Label = "Cropped Image";
+            this.btnExportContentImage.Name = "btnExportContentImage";
+            this.btnExportContentImage.ScreenTip = "Export visible slide content as an image";
+            this.btnExportContentImage.ShowImage = true;
+            this.btnExportContentImage.SuperTip = "Uses the selected DPI and image format, then crops to visible content. Hold Shift while clicking to choose a different location.";
+            this.btnExportContentImage.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnExportContentImage_Click);
             // 
             // Ribbon1
             // 
@@ -91,6 +169,8 @@
             this.tab1.PerformLayout();
             this.group1.ResumeLayout(false);
             this.group1.PerformLayout();
+            this.imageExportGroup.ResumeLayout(false);
+            this.imageExportGroup.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -101,6 +181,11 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group1;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnExportFullSlide;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnExportContent;
+        internal Microsoft.Office.Tools.Ribbon.RibbonGroup imageExportGroup;
+        internal Microsoft.Office.Tools.Ribbon.RibbonComboBox imageDpiComboBox;
+        internal Microsoft.Office.Tools.Ribbon.RibbonDropDown imageFormatDropDown;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnExportSlideImage;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnExportContentImage;
     }
 
     partial class ThisRibbonCollection

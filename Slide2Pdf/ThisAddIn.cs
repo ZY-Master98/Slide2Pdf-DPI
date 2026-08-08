@@ -8,6 +8,9 @@ using Office = Microsoft.Office.Core;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
 using PdfSharp.Drawing;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 
 namespace Slide2Pdf
 {
@@ -47,6 +50,99 @@ namespace Slide2Pdf
                 Intent: PowerPoint.PpFixedFormatIntent.ppFixedFormatIntentPrint,
                 RangeType: PowerPoint.PpPrintRangeType.ppPrintCurrent
             );
+        }
+
+        public void ExportCurrentSlideAsImage(string outPath, string powerPointFilter, int dpi, Rect? cropRect = null)
+        {
+            var slide = Application.ActiveWindow?.View?.Slide as PowerPoint.Slide;
+            if (slide == null)
+            {
+                throw new InvalidOperationException("No active slide is selected.");
+            }
+
+            float slideWidthPoints = Application.ActivePresentation.PageSetup.SlideWidth;
+            float slideHeightPoints = Application.ActivePresentation.PageSetup.SlideHeight;
+            int width = Math.Max(1, (int)Math.Round(slideWidthPoints / 72.0 * dpi));
+            int height = Math.Max(1, (int)Math.Round(slideHeightPoints / 72.0 * dpi));
+
+            if (width > 16384 || height > 16384)
+            {
+                throw new InvalidOperationException(
+                    $"The selected DPI produces a {width} x {height} pixel image. " +
+                    "Reduce the DPI so neither dimension exceeds 16384 pixels.");
+            }
+
+            string temporaryPngPath = Path.Combine(Path.GetTempPath(), $"Slide2Pdf_{Guid.NewGuid():N}.png");
+            try
+            {
+                slide.Export(temporaryPngPath, "PNG", width, height);
+                using (var source = new Bitmap(temporaryPngPath))
+                {
+                    if (!cropRect.HasValue)
+                    {
+                        source.SetResolution(dpi, dpi);
+                        SaveImage(source, outPath, powerPointFilter);
+                    }
+                    else
+                    {
+                        Rectangle pixelBounds = GetPixelCropBounds(cropRect.Value, source.Width, source.Height);
+                        using (var cropped = source.Clone(pixelBounds, PixelFormat.Format32bppArgb))
+                        {
+                            cropped.SetResolution(dpi, dpi);
+                            SaveImage(cropped, outPath, powerPointFilter);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                if (File.Exists(temporaryPngPath))
+                {
+                    File.Delete(temporaryPngPath);
+                }
+            }
+        }
+
+        private static Rectangle GetPixelCropBounds(Rect cropRect, int imageWidth, int imageHeight)
+        {
+            int left = Math.Max(0, (int)Math.Floor(cropRect.Left * imageWidth));
+            int top = Math.Max(0, (int)Math.Floor(cropRect.Top * imageHeight));
+            int right = Math.Min(imageWidth, (int)Math.Ceiling(cropRect.Right * imageWidth));
+            int bottom = Math.Min(imageHeight, (int)Math.Ceiling(cropRect.Bottom * imageHeight));
+            if (right <= left || bottom <= top)
+            {
+                throw new InvalidOperationException("The visible content bounds are empty after cropping.");
+            }
+            return Rectangle.FromLTRB(left, top, right, bottom);
+        }
+
+        private static void SaveImage(Bitmap image, string outPath, string powerPointFilter)
+        {
+            switch ((powerPointFilter ?? string.Empty).ToUpperInvariant())
+            {
+                case "JPG":
+                case "JPEG":
+                    ImageCodecInfo jpegCodec = ImageCodecInfo.GetImageEncoders().First(codec => codec.FormatID == ImageFormat.Jpeg.Guid);
+                    using (var encoderParameters = new EncoderParameters(1))
+                    {
+                        encoderParameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 95L);
+                        image.Save(outPath, jpegCodec, encoderParameters);
+                    }
+                    break;
+                case "TIF":
+                case "TIFF":
+                    image.Save(outPath, ImageFormat.Tiff);
+                    break;
+                case "BMP":
+                    image.Save(outPath, ImageFormat.Bmp);
+                    break;
+                case "GIF":
+                    image.Save(outPath, ImageFormat.Gif);
+                    break;
+                default:
+                    image.Save(outPath, ImageFormat.Png);
+                    break;
+            }
         }
 
         public bool GetCurrentSlideContentBoundingRect(out Rect rect)

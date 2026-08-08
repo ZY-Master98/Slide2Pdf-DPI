@@ -3,6 +3,7 @@ using Microsoft.Office.Tools.Ribbon;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows.Forms; // Required for Control.ModifierKeys, Keys, SaveFileDialog, DialogResult, MessageBox
 
 namespace Slide2Pdf
@@ -11,6 +12,32 @@ namespace Slide2Pdf
     {
         private string currentPresentationFullName = string.Empty;
         private readonly Dictionary<int, string> slideSavePaths = new Dictionary<int, string>();
+        private readonly Dictionary<int, string> slideImageSavePaths = new Dictionary<int, string>();
+
+        private sealed class ImageFormatOption
+        {
+            public string Label { get; }
+            public string PowerPointFilter { get; }
+            public string Extension { get; }
+            public string SaveDialogFilter { get; }
+
+            public ImageFormatOption(string label, string powerPointFilter, string extension)
+            {
+                Label = label;
+                PowerPointFilter = powerPointFilter;
+                Extension = extension;
+                SaveDialogFilter = $"{label} image (*.{extension})|*.{extension}";
+            }
+        }
+
+        private static readonly ImageFormatOption[] ImageFormats =
+        {
+            new ImageFormatOption("PNG", "PNG", "png"),
+            new ImageFormatOption("JPEG", "JPG", "jpg"),
+            new ImageFormatOption("TIFF", "TIF", "tif"),
+            new ImageFormatOption("BMP", "BMP", "bmp"),
+            new ImageFormatOption("GIF", "GIF", "gif"),
+        };
 
         // This method is assumed to be in ThisAddIn.cs or a similar helper class
         // public void ExportCurrentSlideAsPdf(string filePath) { /* ... */ }
@@ -35,6 +62,7 @@ namespace Slide2Pdf
             {
                 currentPresentationFullName = string.Empty;
                 slideSavePaths.Clear();
+                slideImageSavePaths.Clear();
                 return false;
             }
 
@@ -48,6 +76,7 @@ namespace Slide2Pdf
                 {
                     currentPresentationFullName = string.Empty;
                     slideSavePaths.Clear();
+                    slideImageSavePaths.Clear();
                 }
                 return false;
             }
@@ -57,6 +86,7 @@ namespace Slide2Pdf
             {
                 currentPresentationFullName = presentation.FullName;
                 slideSavePaths.Clear();
+                slideImageSavePaths.Clear();
             }
             return true;
         }
@@ -95,6 +125,143 @@ namespace Slide2Pdf
             if (currentSlide != null)
             {
                 slideSavePaths[currentSlide.SlideID] = path;
+            }
+        }
+
+        private string GetSavedImagePathForCurrentSlide()
+        {
+            if (!UpdatePresentationContextAndPathStatus())
+            {
+                return null;
+            }
+
+            Slide currentSlide = Globals.ThisAddIn.Application.ActiveWindow?.View?.Slide as Slide;
+            if (currentSlide != null && slideImageSavePaths.TryGetValue(currentSlide.SlideID, out string savedPath))
+            {
+                return savedPath;
+            }
+            return null;
+        }
+
+        private void StoreImagePathForCurrentSlide(string path)
+        {
+            if (!UpdatePresentationContextAndPathStatus() || string.IsNullOrEmpty(path))
+            {
+                return;
+            }
+
+            Slide currentSlide = Globals.ThisAddIn.Application.ActiveWindow?.View?.Slide as Slide;
+            if (currentSlide != null)
+            {
+                slideImageSavePaths[currentSlide.SlideID] = path;
+            }
+        }
+
+        private ImageFormatOption GetSelectedImageFormat()
+        {
+            string selectedLabel = imageFormatDropDown.SelectedItem?.Label ?? "PNG";
+            foreach (ImageFormatOption format in ImageFormats)
+            {
+                if (string.Equals(format.Label, selectedLabel, StringComparison.OrdinalIgnoreCase))
+                {
+                    return format;
+                }
+            }
+            return ImageFormats[0];
+        }
+
+        private bool TryGetImageDpi(out int dpi)
+        {
+            dpi = 0;
+            string value = imageDpiComboBox.Text ?? string.Empty;
+            Match match = Regex.Match(value, @"^\s*(\d+)\s*(?:dpi)?\s*$", RegexOptions.IgnoreCase);
+            if (!match.Success ||
+                !int.TryParse(match.Groups[1].Value, out dpi) ||
+                dpi < 36 || dpi > 1200)
+            {
+                MessageBox.Show(
+                    "Enter a DPI value from 36 to 1200, for example 300 DPI.",
+                    "Invalid Image DPI",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return false;
+            }
+            return true;
+        }
+
+        private bool ExportCurrentSlideImageToFile(bool cropToContent, bool forceNewPathSelection, out string exportedImagePath)
+        {
+            exportedImagePath = null;
+            var addIn = Globals.ThisAddIn;
+            Presentation presentation = addIn.Application.ActivePresentation;
+            Slide currentSlide = addIn.Application.ActiveWindow?.View?.Slide as Slide;
+
+            if (presentation == null || currentSlide == null)
+            {
+                MessageBox.Show("Open a presentation and select a slide, then try again.", "Nothing to Export", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (!TryGetImageDpi(out int dpi))
+            {
+                return false;
+            }
+
+            Rect cropRect = new Rect();
+            if (cropToContent && !addIn.GetCurrentSlideContentBoundingRect(out cropRect))
+            {
+                MessageBox.Show("This slide has no visible content to crop. Export the full slide, or add visible content and try again.", "Nothing to Crop", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            ImageFormatOption format = GetSelectedImageFormat();
+            string targetPath = forceNewPathSelection ? null : GetSavedImagePathForCurrentSlide();
+            if (!string.IsNullOrEmpty(targetPath))
+            {
+                targetPath = Path.ChangeExtension(targetPath, format.Extension);
+            }
+
+            if (string.IsNullOrEmpty(targetPath))
+            {
+                using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+                {
+                    saveFileDialog.Filter = format.SaveDialogFilter;
+                    saveFileDialog.Title = cropToContent ? "Save Cropped Slide as Image" : "Save Current Slide as Image";
+                    saveFileDialog.DefaultExt = format.Extension;
+                    saveFileDialog.AddExtension = true;
+                    string pptName = Path.GetFileNameWithoutExtension(presentation.Name);
+                    string suffix = cropToContent ? "_cropped" : string.Empty;
+                    saveFileDialog.FileName = $"{pptName}_Slide{currentSlide.SlideIndex}{suffix}.{format.Extension}";
+
+                    if (presentation.Saved == Microsoft.Office.Core.MsoTriState.msoTrue &&
+                        !string.IsNullOrEmpty(presentation.Path) &&
+                        !presentation.Path.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    {
+                        saveFileDialog.InitialDirectory = presentation.Path;
+                    }
+
+                    if (saveFileDialog.ShowDialog() != DialogResult.OK)
+                    {
+                        return false;
+                    }
+
+                    targetPath = Path.ChangeExtension(saveFileDialog.FileName, format.Extension);
+                    StoreImagePathForCurrentSlide(targetPath);
+                }
+            }
+
+            try
+            {
+                addIn.ExportCurrentSlideAsImage(targetPath, format.PowerPointFilter, dpi,
+                    cropToContent ? (Rect?)cropRect : null);
+                exportedImagePath = targetPath;
+                StoreImagePathForCurrentSlide(targetPath);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Couldn't export this slide as an image.\n\n{ex.Message}", "Image Export Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
         }
 
@@ -204,6 +371,24 @@ namespace Slide2Pdf
                 {
                     MessageBox.Show($"The full slide was exported, but it couldn't be cropped.\n\nFile: {outputPath}\nError: {ex.Message}", "Couldn't Crop PDF", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
+            }
+        }
+
+        private void btnExportSlideImage_Click(object sender, RibbonControlEventArgs e)
+        {
+            bool forceNewPath = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+            if (ExportCurrentSlideImageToFile(false, forceNewPath, out string outputPath))
+            {
+                MessageBox.Show("Image exported to:\n" + outputPath, "Image Exported", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void btnExportContentImage_Click(object sender, RibbonControlEventArgs e)
+        {
+            bool forceNewPath = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+            if (ExportCurrentSlideImageToFile(true, forceNewPath, out string outputPath))
+            {
+                MessageBox.Show("Cropped image exported to:\n" + outputPath, "Image Exported", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
     }

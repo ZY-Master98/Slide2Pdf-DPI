@@ -6,7 +6,7 @@
 
 ## 中文说明
 
-Slide2Pdf 可以将当前幻灯片单独导出为 PDF，也可以自动裁到可见内容边界，方便把 PowerPoint 制作的图示插入 LaTeX 或其他文档。
+Slide2Pdf 可以将当前幻灯片单独导出为 PDF 或图片，也可以自动裁到可见内容边界，方便把 PowerPoint 制作的图示插入 LaTeX 或其他文档。
 
 | 版本 | 运行环境 | 主要特点 |
 | --- | --- | --- |
@@ -31,6 +31,13 @@ Windows 版提供两种导出方式：
 
 - `Export Full Slide`：按幻灯片原始尺寸导出当前页。
 - `Crop to Content`：导出当前页，并裁到可见内容边界。
+
+Windows 版还提供图片导出设置：
+
+- `DPI`：可选 96、150、300、600 DPI，也可输入 36–1200 范围内的自定义值。插件会按照幻灯片的实际尺寸自动计算像素，并写入对应的 DPI 元数据。
+- `Format`：支持 PNG、JPEG、TIFF、BMP 和 GIF。
+- `Full Slide Image`：按所选 DPI 和格式导出完整幻灯片。
+- `Cropped Image`：按所选 DPI 渲染并写入清晰度元数据，再裁到可见内容边界。
 
 对于已经保存的演示文稿，Slide2Pdf 会记住每一页的导出位置。按住 `Shift` 再点击导出按钮，可以重新选择位置。
 
