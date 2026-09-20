@@ -36,7 +36,7 @@ Windows 版还提供图片导出设置：
 
 - `DPI`：可选 96、150、300、600 DPI，也可输入 36–1200 范围内的自定义值。插件会按照幻灯片的实际尺寸自动计算像素，并写入对应的 DPI 元数据。
 - `Format`：支持 PNG、JPEG、TIFF、BMP 和 GIF。
-- `Copy Slide Image`：按所选 DPI 将完整幻灯片直接复制到剪贴板，不创建文件。
+- `Copy Cropped Image`：按所选 DPI 和 `Cropped Image` 相同的可见内容边界裁切后直接复制到剪贴板，不创建文件。
 - `Full Slide Image`：按所选 DPI 和格式导出完整幻灯片。
 - `Cropped Image`：按所选 DPI 渲染并写入清晰度元数据，再裁到可见内容边界。
 
@@ -112,7 +112,7 @@ The Windows version provides two export actions:
 The Windows version also provides image controls:
 
 - `DPI` accepts the 96, 150, 300, and 600 DPI presets or a custom value from 36 to 1200 DPI.
-- `Copy Slide Image` copies the full slide at the selected DPI directly to the clipboard without creating a file.
+- `Copy Cropped Image` copies the visible slide content at the selected DPI using the same crop bounds as `Cropped Image`, without creating a file.
 - `Format`, `Full Slide Image`, and `Cropped Image` control image file exports.
 
 For saved presentations, Slide2Pdf remembers the export location for each slide. Hold `Shift` while clicking an export button to choose a different location.
@@ -182,6 +182,12 @@ Deploy the static Office.js frontend with `npm run deploy`.
 
 ## Changelog
 
+- v1.1.4
+  - Make clipboard copying use the same visible-content crop bounds as `Cropped Image`.
+- v1.1.3
+  - Publish copied slides with the standard bitmap clipboard format to avoid GDI+ serialization failures.
+- v1.1.2
+  - Retry temporary slide-image access so clipboard copying remains reliable while PowerPoint finishes writing the rendered PNG.
 - v1.1.1
   - Add `Copy Slide Image` to copy the current slide at the selected DPI without creating an export file.
 - v1.0.0.3

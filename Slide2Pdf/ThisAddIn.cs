@@ -11,6 +11,7 @@ using PdfSharp.Drawing;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Threading;
 
 namespace Slide2Pdf
 {
@@ -64,9 +65,12 @@ namespace Slide2Pdf
         {
             using (Bitmap image = RenderCurrentSlideImage(dpi, cropRect))
             {
-                // Persist the bitmap on the clipboard so it remains available after
-                // the temporary in-memory image is disposed.
-                System.Windows.Forms.Clipboard.SetDataObject(image, true, 5, 100);
+                // Explicitly publish only the standard Bitmap clipboard format.
+                // Passing an Image directly makes Windows Forms auto-serialize its
+                // MemoryBmp raw format, which can fail with a generic GDI+ error.
+                var clipboardData = new System.Windows.Forms.DataObject();
+                clipboardData.SetData(System.Windows.Forms.DataFormats.Bitmap, true, image);
+                System.Windows.Forms.Clipboard.SetDataObject(clipboardData, true, 5, 100);
             }
         }
 
@@ -94,7 +98,7 @@ namespace Slide2Pdf
             try
             {
                 slide.Export(temporaryPngPath, "PNG", width, height);
-                using (var source = new Bitmap(temporaryPngPath))
+                using (var source = LoadTemporaryBitmap(temporaryPngPath))
                 {
                     Rectangle pixelBounds = cropRect.HasValue
                         ? GetPixelCropBounds(cropRect.Value, source.Width, source.Height)
@@ -114,11 +118,80 @@ namespace Slide2Pdf
             }
             finally
             {
-                if (File.Exists(temporaryPngPath))
+                DeleteTemporaryFileBestEffort(temporaryPngPath);
+            }
+        }
+
+        private static Bitmap LoadTemporaryBitmap(string path)
+        {
+            Exception lastException = null;
+            for (int attempt = 1; attempt <= 10; attempt++)
+            {
+                try
                 {
-                    File.Delete(temporaryPngPath);
+                    // PowerPoint can keep the exported PNG open briefly after Slide.Export
+                    // returns. Shared access plus a detached clone avoids retaining that lock.
+                    using (var stream = new FileStream(
+                        path,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.ReadWrite | FileShare.Delete))
+                    using (var temporary = new Bitmap(stream))
+                    {
+                        return temporary.Clone(
+                            new Rectangle(0, 0, temporary.Width, temporary.Height),
+                            PixelFormat.Format32bppArgb);
+                    }
+                }
+                catch (IOException ex)
+                {
+                    lastException = ex;
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    lastException = ex;
+                }
+                catch (ArgumentException ex)
+                {
+                    // The image may still be incomplete while PowerPoint is flushing it.
+                    lastException = ex;
+                }
+
+                if (attempt < 10)
+                {
+                    Thread.Sleep(50 * attempt);
                 }
             }
+
+            throw new IOException("PowerPoint did not finish writing the temporary slide image.", lastException);
+        }
+
+        private static void DeleteTemporaryFileBestEffort(string path)
+        {
+            for (int attempt = 1; attempt <= 10; attempt++)
+            {
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                    }
+                    return;
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+
+                if (attempt < 10)
+                {
+                    Thread.Sleep(50 * attempt);
+                }
+            }
+
+            // A stale temp file is preferable to failing an otherwise successful copy.
         }
 
         private static Rectangle GetPixelCropBounds(Rect cropRect, int imageWidth, int imageHeight)

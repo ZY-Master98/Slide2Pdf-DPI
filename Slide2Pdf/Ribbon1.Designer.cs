@@ -143,12 +143,12 @@
             //
             // btnCopySlideImage
             //
-            this.btnCopySlideImage.Label = "Copy Slide Image";
+            this.btnCopySlideImage.Label = "Copy Cropped Image";
             this.btnCopySlideImage.Name = "btnCopySlideImage";
             this.btnCopySlideImage.OfficeImageId = "Copy";
-            this.btnCopySlideImage.ScreenTip = "Copy the current slide as an image";
+            this.btnCopySlideImage.ScreenTip = "Copy visible slide content as an image";
             this.btnCopySlideImage.ShowImage = true;
-            this.btnCopySlideImage.SuperTip = "Uses the selected DPI and copies the rendered slide directly to the clipboard without creating a file.";
+            this.btnCopySlideImage.SuperTip = "Uses the selected DPI, crops to the same visible-content bounds as Cropped Image, and copies directly to the clipboard without creating a file.";
             this.btnCopySlideImage.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnCopySlideImage_Click);
             //
             // btnExportSlideImage

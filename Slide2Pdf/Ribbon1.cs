@@ -390,11 +390,22 @@ namespace Slide2Pdf
                 return;
             }
 
+            var addIn = Globals.ThisAddIn;
+            if (!addIn.GetCurrentSlideContentBoundingRect(out Rect cropRect))
+            {
+                MessageBox.Show(
+                    "This slide has no visible content to copy.",
+                    "Nothing to Copy",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
             try
             {
-                Globals.ThisAddIn.CopyCurrentSlideAsImage(dpi);
+                addIn.CopyCurrentSlideAsImage(dpi, cropRect);
                 MessageBox.Show(
-                    $"The current slide was copied as a {dpi} DPI image.",
+                    $"The cropped slide content was copied as a {dpi} DPI image.",
                     "Image Copied",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
