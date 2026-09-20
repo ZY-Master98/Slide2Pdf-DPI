@@ -41,6 +41,7 @@
             this.imageExportGroup = this.Factory.CreateRibbonGroup();
             this.imageDpiComboBox = this.Factory.CreateRibbonComboBox();
             this.imageFormatDropDown = this.Factory.CreateRibbonDropDown();
+            this.btnCopySlideImage = this.Factory.CreateRibbonButton();
             this.btnExportSlideImage = this.Factory.CreateRibbonButton();
             this.btnExportContentImage = this.Factory.CreateRibbonButton();
             Microsoft.Office.Tools.Ribbon.RibbonDropDownItem dpi96 = this.Factory.CreateRibbonDropDownItem();
@@ -100,6 +101,7 @@
             // imageExportGroup
             //
             this.imageExportGroup.Items.Add(this.imageDpiComboBox);
+            this.imageExportGroup.Items.Add(this.btnCopySlideImage);
             this.imageExportGroup.Items.Add(this.imageFormatDropDown);
             this.imageExportGroup.Items.Add(this.btnExportSlideImage);
             this.imageExportGroup.Items.Add(this.btnExportContentImage);
@@ -138,6 +140,16 @@
             this.imageFormatDropDown.Label = "Format";
             this.imageFormatDropDown.Name = "imageFormatDropDown";
             this.imageFormatDropDown.ScreenTip = "Output image format";
+            //
+            // btnCopySlideImage
+            //
+            this.btnCopySlideImage.Label = "Copy Slide Image";
+            this.btnCopySlideImage.Name = "btnCopySlideImage";
+            this.btnCopySlideImage.OfficeImageId = "Copy";
+            this.btnCopySlideImage.ScreenTip = "Copy the current slide as an image";
+            this.btnCopySlideImage.ShowImage = true;
+            this.btnCopySlideImage.SuperTip = "Uses the selected DPI and copies the rendered slide directly to the clipboard without creating a file.";
+            this.btnCopySlideImage.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnCopySlideImage_Click);
             //
             // btnExportSlideImage
             //
@@ -184,6 +196,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup imageExportGroup;
         internal Microsoft.Office.Tools.Ribbon.RibbonComboBox imageDpiComboBox;
         internal Microsoft.Office.Tools.Ribbon.RibbonDropDown imageFormatDropDown;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnCopySlideImage;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnExportSlideImage;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnExportContentImage;
     }

@@ -383,6 +383,32 @@ namespace Slide2Pdf
             }
         }
 
+        private void btnCopySlideImage_Click(object sender, RibbonControlEventArgs e)
+        {
+            if (!TryGetImageDpi(out int dpi))
+            {
+                return;
+            }
+
+            try
+            {
+                Globals.ThisAddIn.CopyCurrentSlideAsImage(dpi);
+                MessageBox.Show(
+                    $"The current slide was copied as a {dpi} DPI image.",
+                    "Image Copied",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Couldn't copy this slide as an image.\n\n{ex.Message}",
+                    "Image Copy Failed",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
         private void btnExportContentImage_Click(object sender, RibbonControlEventArgs e)
         {
             bool forceNewPath = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;

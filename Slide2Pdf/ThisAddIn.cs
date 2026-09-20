@@ -54,6 +54,24 @@ namespace Slide2Pdf
 
         public void ExportCurrentSlideAsImage(string outPath, string powerPointFilter, int dpi, Rect? cropRect = null)
         {
+            using (Bitmap image = RenderCurrentSlideImage(dpi, cropRect))
+            {
+                SaveImage(image, outPath, powerPointFilter);
+            }
+        }
+
+        public void CopyCurrentSlideAsImage(int dpi, Rect? cropRect = null)
+        {
+            using (Bitmap image = RenderCurrentSlideImage(dpi, cropRect))
+            {
+                // Persist the bitmap on the clipboard so it remains available after
+                // the temporary in-memory image is disposed.
+                System.Windows.Forms.Clipboard.SetDataObject(image, true, 5, 100);
+            }
+        }
+
+        private Bitmap RenderCurrentSlideImage(int dpi, Rect? cropRect)
+        {
             var slide = Application.ActiveWindow?.View?.Slide as PowerPoint.Slide;
             if (slide == null)
             {
@@ -78,19 +96,19 @@ namespace Slide2Pdf
                 slide.Export(temporaryPngPath, "PNG", width, height);
                 using (var source = new Bitmap(temporaryPngPath))
                 {
-                    if (!cropRect.HasValue)
+                    Rectangle pixelBounds = cropRect.HasValue
+                        ? GetPixelCropBounds(cropRect.Value, source.Width, source.Height)
+                        : new Rectangle(0, 0, source.Width, source.Height);
+                    Bitmap rendered = source.Clone(pixelBounds, PixelFormat.Format32bppArgb);
+                    try
                     {
-                        source.SetResolution(dpi, dpi);
-                        SaveImage(source, outPath, powerPointFilter);
+                        rendered.SetResolution(dpi, dpi);
+                        return rendered;
                     }
-                    else
+                    catch
                     {
-                        Rectangle pixelBounds = GetPixelCropBounds(cropRect.Value, source.Width, source.Height);
-                        using (var cropped = source.Clone(pixelBounds, PixelFormat.Format32bppArgb))
-                        {
-                            cropped.SetResolution(dpi, dpi);
-                            SaveImage(cropped, outPath, powerPointFilter);
-                        }
+                        rendered.Dispose();
+                        throw;
                     }
                 }
             }
